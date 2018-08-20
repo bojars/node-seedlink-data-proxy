@@ -144,16 +144,10 @@ SeedlinkWebsocket.prototype.logRecordMessage = function(request, json) {
 
 SeedlinkWebsocket.prototype.handleIncomingMessage = function(socket, message) {
 
-  /* Function SeedlinkWebsocket.handleIncomingMessage
-   * Code to handle messages send to the server over the websocket
-   */
-
-  var json = JSON.parse(message);
-
-  if(json.subscribe) {
-    this.subscribe(json.subscribe, socket);
-  } else if(json.unsubscribe) {
-    this.unsubscribe(json.unsubscribe, socket);
+  if (message && message.indexOf('+') === 0) {
+    this.subscribe(message.substr(1), socket);
+  } else if (message && message.indexOf('-') === 0) {
+    this.unsubscribe(message.substr(1), socket);
   } else {
     throw new Error("Invalid JSON message specified.");
   }

@@ -63,7 +63,7 @@ SeedlinkOsc.prototype.createOscServerListener = function () {
     if (path === '/subscribe') {
       this.channels[channel].connect()
     } else if (path === '/unsubscribe') {
-      this.channels[channel].disconnect()
+      this.channels[channel].disconnect(() => {})
     }
   }.bind(this))
 }

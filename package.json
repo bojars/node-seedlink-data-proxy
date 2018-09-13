@@ -11,7 +11,9 @@
     "url": "git+https://github.com/Jollyfant/node-seedlink-data-proxy.git"
   },
   "dependencies": {
+    "bluebird": "^3.5.2",
     "libmseedjs": "^1.0.0",
+    "node-osc": "^2.1.0",
     "ws": "^5.2.1"
   },
   "devDependencies": {},

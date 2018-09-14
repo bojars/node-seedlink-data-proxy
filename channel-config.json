@@ -1,11 +1,78 @@
 [{
-  "name": "NL.HGN",
-  "host": "eida.bgr.de",
-  "port": 18000,
-  "selectors": [{
-    "network": "GR",
-    "station": "RETH",
-    "channel": "???",
-    "location": "??"
-  }]
-}]
+    "name": "GE.ARPR",
+    "host": "geofon.gfz-potsdam.de",
+    "port": 18000,
+    "selectors": [{
+      "network": "GE",
+      "station": "ARPR",
+      "channel": "???",
+      "location": "??"
+    }]
+  },
+  {
+    "name": "IRIS.KAPIz",
+    "host": "rtserve.iris.washington.edu",
+    "port": 18000,
+    "selectors": [{
+      "network": "II",
+      "station": "KAPI",
+      "channel": "BHZ",
+      "location": "10"
+    }]
+  },
+  {
+    "name": "IRIS.KAPI2",
+    "host": "rtserve.iris.washington.edu",
+    "port": 18000,
+    "selectors": [{
+      "network": "II",
+      "station": "KAPI",
+      "channel": "BH2",
+      "location": "10"
+    }]
+  },
+  {
+    "name": "BHZ.ALL",
+    "host": "rtserve.iris.washington.edu",
+    "port": 18000,
+    "selectors": [{
+      "network": "*",
+      "station": "*",
+      "channel": "BHZ",
+      "location": "  "
+    }]
+  },
+  {
+    "name": "BH1.ALL",
+    "host": "rtserve.iris.washington.edu",
+    "port": 18000,
+    "selectors": [{
+      "network": "*",
+      "station": "*",
+      "channel": "BH1",
+      "location": "  "
+    }]
+  },
+  {
+    "name": "BH2.ALL",
+    "host": "rtserve.iris.washington.edu",
+    "port": 18000,
+    "selectors": [{
+      "network": "*",
+      "station": "*",
+      "channel": "BH2",
+      "location": "  "
+    }]
+  },
+  {
+    "name": "HHZ.ALL",
+    "host": "rtserve.iris.washington.edu",
+    "port": 18000,
+    "selectors": [{
+      "network": "*",
+      "station": "*",
+      "channel": "HH?",
+      "location": "  "
+    }]
+  }
+]

@@ -2,7 +2,7 @@ var osc = require('node-osc')
 
 var connected = false
 var client = new osc.Client('127.0.0.1', 9002)
-client.send('/subscribe', 'BHZ.ALL', function () {
+client.send('/subscribe', 'HOT.ALL', function () {
   connected = true
 })
 
@@ -26,7 +26,7 @@ function shutdown () {
   console.info('Got SIGTERM. Graceful shutdown start', new Date().toISOString())
 
   if (connected) {
-    client.send('/unsubscribe', 'BHZ.ALL', function () {
+    client.send('/unsubscribe', 'HOT.ALL', function () {
       process.exit()
     })
   } else {

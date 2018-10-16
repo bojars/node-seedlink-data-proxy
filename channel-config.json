@@ -78,12 +78,6 @@
   {
     "name": "HOT.ALL",
     "host": "rtserve.iris.washington.edu",
-    "port": 18000,
-    "selectors": [{
-      "network": "_GSN",
-      "station": "*",
-      "channel": "BH?",
-      "location": "00"
-    }]
+    "port": 18000
   }
 ]

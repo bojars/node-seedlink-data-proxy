@@ -15,10 +15,12 @@
 
 // Third party libs
 const osc = require('node-osc')
+
 global.Promise = require('bluebird')
 
 // Application libs
 const SeedlinkProxy = require('./lib/seedlink-proxy')
+const hotAll = require('./lib/hot-all')
 
 const __VERSION__ = '1.0.0'
 
@@ -42,6 +44,9 @@ const SeedlinkOsc = function (configuration, callback) {
   // Create all channels
   this.createSeedlinkProxies()
 
+  // Create HOT.ALL stations listeners
+  this.createHotAllListeners()
+
   callback(configuration.__NAME__, configuration)
 }
 
@@ -55,15 +60,33 @@ SeedlinkOsc.prototype.createOscServerListener = function () {
     const path = msg.shift()
     const channel = msg.shift()
 
-    if (!channel || !this.channels[channel]) {
+    if (!channel || (!this.channels[channel] && channel !== 'HOT.ALL')) {
       console.error('Could not find provided channel')
       return
     }
 
-    if (path === '/subscribe') {
-      this.channels[channel].connect()
-    } else if (path === '/unsubscribe') {
-      this.channels[channel].disconnect(() => {})
+    const isSubscribe = path === '/subscribe'
+    const isUnsubscribe = path === '/unsubscribe'
+
+    let channelsList = []
+    if (channel === 'HOT.ALL') {
+      this.hotAllChannelSubscribed = isSubscribe
+
+      channelsList = Object.keys(this.channels).reduce((acc, name) => {
+        if (name.indexOf('HOT.ALL') === 0) {
+          acc.push(this.channels[name])
+        }
+
+        return acc
+      }, [])
+    } else {
+      channelsList.push(this.channels[channel])
+    }
+
+    if (isSubscribe) {
+      channelsList.forEach(channel => channel.connect())
+    } else if (isUnsubscribe) {
+      channelsList.forEach(channel => channel.disconnect(() => {}))
     }
   }.bind(this))
 }
@@ -74,6 +97,8 @@ SeedlinkOsc.prototype.createSeedlinkProxies = function () {
    */
 
   this.channels = {}
+  this.hotAllChannel = null
+  this.hotAllChannelSubscribed = false
 
   this.handler = (err, result) => {
     if (err) {
@@ -90,8 +115,100 @@ SeedlinkOsc.prototype.createSeedlinkProxies = function () {
 
   // Read the channel configuration and create new sleeping proxies
   require('./channel-config').forEach((channel) => {
-    this.channels[channel.name] = new SeedlinkProxy(channel, this.handler)
+    if (channel.name !== 'HOT.ALL') {
+      // As HOT.ALL is special channel, ignore it here
+      this.channels[channel.name] = new SeedlinkProxy(channel, this.handler)
+    } else {
+      // Store hot.all channel info
+      this.hotAllChannel = channel
+    }
   })
+
+  if (this.hotAllChannel) {
+    // Add HOT.ALL channels, if any exist
+    const stations = hotAll.getStations();
+    (stations || []).forEach(stationStr => {
+      const channel = this.station2channel(stationStr)
+
+      console.log(`HOT.ALL channel created`, channel)
+
+      this.channels[channel.name] = new SeedlinkProxy(channel, this.handler)
+    })
+  }
+
+  // TODO: Create listener for added/removed seedlink channels from seismo project
+  // TODO: When new network.station is received, make new channel, that start with "_HOT_ALL_" so that when stopping HOT.ALL, stop all channels that start with mentioned pattern
+  // TODO: New station is added, make sure that if currently are connected to HOT.ALL, then automagically also connects new station
+}
+
+SeedlinkOsc.prototype.station2channel = function (stationStr) {
+  if (!this.hotAllChannel) {
+    throw new Error('Not HOT.ALL channel defined in channel-config.json')
+  }
+
+  const name = `HOT.ALL.${stationStr}`
+
+  const station = hotAll.string2Station(stationStr)
+
+  return { ...this.hotAllChannel,
+    name,
+    selectors: [{
+      network: station.net,
+      station: station.sta,
+      channel: 'BH?', // Not taking stations channels, just listen all BH..
+      location: station.loc
+    }]
+  }
+}
+
+SeedlinkOsc.prototype.createHotAllListeners = function () {
+  if (this.hotAllChannel) {
+    console.log('Adding HOT.ALL listeners')
+
+    // This listener only makes sense if we have HOT.ALL as defined station in channel-config.json file
+    hotAll.on('add', this.onHotStationAdd.bind(this))
+    hotAll.on('remove', this.onHotStationRemove.bind(this))
+  } else {
+    console.log('No HOT.ALL channel provided, not setting listeners')
+  }
+}
+
+SeedlinkOsc.prototype.onHotStationAdd = function (stationStr) {
+  console.log('Station added:', stationStr)
+  const channel = this.station2channel(stationStr)
+  if (!this.channels[channel.name]) {
+    console.log('Station added:', stationStr, 'not found in channels list, creating new')
+
+    this.channels[channel.name] = new SeedlinkProxy(channel, this.handler)
+
+    if (this.hotAllChannelSubscribed) {
+      console.log('Station added:', stationStr, 'connecting, as HOT.ALL was listening')
+      this.channels[channel.name].connect()
+    }
+
+    console.log('Station added:', stationStr, 'added successfuly')
+  }
+}
+
+SeedlinkOsc.prototype.onHotStationRemove = function (stationStr) {
+  console.log('Station removed:', stationStr)
+
+  const channel = this.station2channel(stationStr)
+
+  if (this.channels[channel.name]) {
+    console.log('Station removed:', stationStr, 'channel found')
+
+    if (this.hotAllChannelSubscribed) {
+      console.log('Station removed:', stationStr, 'channel disconnect')
+
+      this.channels[channel.name].disconnect(() => {})
+    }
+
+    // Remove from channels
+    delete this.channels[channel.name]
+
+    console.log('Station removed:', stationStr, 'channel removed')
+  }
 }
 
 SeedlinkOsc.prototype.disconnectChannels = function (cb) {
@@ -116,9 +233,9 @@ let isStopping = false
 function shutdown () {
   if (isStopping) {
     return
-  } else {
-    isStopping = true
   }
+
+  isStopping = true
 
   console.info('Got SIGTERM. Graceful shutdown start', new Date().toISOString())
 
